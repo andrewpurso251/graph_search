@@ -8,8 +8,28 @@ from grid import *
 barriers = []
 
 def pointInPolygon(point, polygon):
-    x = point.x
-    y = point.y
+    # implement ray casting algorithm
+    x, y = point.x, point.y
+    intersections = 0
+    for i in range(len(polygon)):
+        x1 = polygon[i][0]
+        y1 = polygon[i][1]
+        x2 = polygon[(i+1)%len(polygon)][0]
+        y2 = polygon[(i+1)%len(polygon)][1]
+        
+        if y1 != y2:  # Ensure we are not dividing by zero
+            if min(y1, y2) < y <= max(y1, y2):  # Strict inequality to avoid touching edges
+                x0 = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
+                if x <= x0:  # Strict inequality to avoid touching edges
+                    intersections += 1
+    
+    return intersections % 2 == 1
+
+def checkRange(point):
+    if point.x < 0 or point.x >= 50 or point.y < 0 or point.y >= 50:
+        print("out of range")
+        return False
+    return True
 
 def checkPointInPolygon(point):
     for barrier in barriers:
@@ -29,56 +49,39 @@ def gen_polygons(worldfilepath):
                 polygon.append(Point(int(xy[0]), int(xy[1])))
             polygons.append(polygon)
     return polygons
-def dfs():
-    res_path = []
-    
-    
-    sourceX = 8
-    sourceY = 10
-    destX = 43
-    destY = 45
 
-    queue = Queue()
-    queue.push(source)
+
+resPath = []
+
+# unction DEPTH-FIRST-SEARCH(problem) returns a solution node or failure
+# frontier <- a LIFO queue (stack) with NODE(problem.INITIAL) as an element
+# while not IS-EMPTY(frontier) do
+# node <- POP(frontier)
+# if problem.IS-GOAL(node.STATE) then return node
+# for each child in EXPAND(problem, node) do
+# if not IS-CYCLE(child) do
+# add child to frontier
+# return result
+def dfs(source, dest):
+    res_path = []
+    frontier = Stack()  # Correct instantiation
+    frontier.push(source)  # Initialize stack with the source point and path
     visited = set()
     visited.add((source.x, source.y))
 
-    while not queue.isEmpty():
-        current = queue.pop()
+    while not frontier.isEmpty():
+        current = frontier.pop()
         res_path.append(current)
-        if current.x == destX and current.y == destY:
+        if current.x == dest.x and current.y == dest.y:
             return res_path
-        
-        # get coordinates
-        if current.y + 1 < 50:
-            up = Point(current.x, current.y + 1)
-            if (up.x, up.y) not in visited:
-                queue.push(up)
-                visited.add((up.x, up.y))
-        if current.x + 1 < 50:    
-            right = Point(current.x + 1, current.y)
-            if (right.x, right.y) not in visited:
-                queue.push(right)
-                visited.add((right.x, right.y))
-            
-        if current.y - 1 >= 0:
-            down = Point(current.x, current.y - 1)
-            if (down.x, down.y) not in visited:
-                queue.push(down)
-                visited.add((down.x, down.y))
-            
-        if current.x - 1 >= 0:
-            left = Point(current.x - 1, current.y)
-            if (left.x, left.y) not in visited:
-                queue.push(left)
-                visited.add((left.x, left.y))
-
-        
-                
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            neighbor = Point(current.x + dx, current.y + dy)
+            if (neighbor.x, neighbor.y) not in visited and checkRange(neighbor) and not checkPointInPolygon(neighbor):
+                frontier.push((neighbor))
+                visited.add((neighbor.x, neighbor.y))
 
     return res_path
 
-    
 if __name__ == "__main__":
     epolygons = gen_polygons('TestingGrid/world1_enclosures.txt')
     tpolygons = gen_polygons('TestingGrid/world1_turfs.txt')
@@ -115,11 +118,11 @@ if __name__ == "__main__":
         for i in range(0, len(polygon)):
             draw_green_line(ax, [polygon[i].x, polygon[(i+1)%len(polygon)].x], [polygon[i].y, polygon[(i+1)%len(polygon)].y])
 
-    res_path = dfs()
+    res_path = dfs(source, dest)
     
-    for i in range(len(res_path)-1):
-        draw_result_line(ax, [res_path[i].x, res_path[i+1].x], [res_path[i].y, res_path[i+1].y])
+    for i in range(len(res_path)-1, 0, -1):
+        draw_result_line(ax, [res_path[i].x, res_path[i-1].x], [res_path[i].y, res_path[i-1].y])
         plt.pause(0.1)
    
     plt.show()
-    
+
