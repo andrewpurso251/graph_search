@@ -53,6 +53,59 @@ def gen_polygons(worldfilepath):
 
 resPath = []
 
+def calculateDistance(point1x, point1y, point2x, point2y):
+    return ((point1x - point2x) ** 2 + (point1y - point2y) ** 2) ** 0.5
+
+def greedyExpansion(current, dest):
+    minDistance = 99999999
+    bestX, bestY = 0, 0
+    for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+        res = calculateDistance(current.x + dx, current.y + dy, dest.x, dest.y)
+        if res < minDistance:
+            minDistance = res
+            bestX = current.x + dx
+            bestY = current.y + dy
+
+    return Point(bestX, bestY)
+
+def gbfs(source, dest):
+    frontier = PriorityQueue()
+    frontier.push(source, 0)
+    visited = set()
+    visited.add((source.x, source.y))
+    resPath = []
+    while not frontier.isEmpty():
+        current = frontier.pop()
+        resPath.append(current)
+        if current.x == dest.x and current.y == dest.y:
+            return resPath
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            neighbor = Point(current.x + dx, current.y + dy)
+            if (neighbor.x, neighbor.y) not in visited and checkRange(neighbor) and not checkPointInPolygon(neighbor):
+                frontier.push(neighbor, calculateDistance(neighbor.x, neighbor.y, dest.x, dest.y))
+                visited.add((neighbor.x, neighbor.y))
+
+    return resPath
+
+def aStar(source, dest):
+    frontier = PriorityQueue()
+    frontier.push(source, 0)
+    visited = set()
+    visited.add((source.x, source.y))
+    resPath = []
+    while not frontier.isEmpty():
+        current = frontier.pop()
+        resPath.append(current)
+        if current.x == dest.x and current.y == dest.y:
+            return resPath
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            neighbor = Point(current.x + dx, current.y + dy)
+            if (neighbor.x, neighbor.y) not in visited and checkRange(neighbor) and not checkPointInPolygon(neighbor):
+                frontier.push(neighbor, calculateDistance(neighbor.x, neighbor.y, dest.x, dest.y))
+                visited.add((neighbor.x, neighbor.y))
+
+    return resPath
+
 # unction DEPTH-FIRST-SEARCH(problem) returns a solution node or failure
 # frontier <- a LIFO queue (stack) with NODE(problem.INITIAL) as an element
 # while not IS-EMPTY(frontier) do
@@ -65,22 +118,41 @@ resPath = []
 def dfs(source, dest):
     res_path = []
     frontier = Stack()  # Correct instantiation
-    frontier.push(source)  # Initialize stack with the source point and path
+    frontier.push((source, [source]))  # Initialize stack with the source point and path
     visited = set()
     visited.add((source.x, source.y))
 
     while not frontier.isEmpty():
-        current = frontier.pop()
+        current, path = frontier.pop()
         res_path.append(current)
         if current.x == dest.x and current.y == dest.y:
             return res_path
         for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
             neighbor = Point(current.x + dx, current.y + dy)
             if (neighbor.x, neighbor.y) not in visited and checkRange(neighbor) and not checkPointInPolygon(neighbor):
-                frontier.push((neighbor))
+                frontier.push((neighbor, path + [neighbor]))
                 visited.add((neighbor.x, neighbor.y))
 
     return res_path
+
+def bfs(source, dest):
+    frontier = Queue()
+    frontier.push((source, [source]))  # Store the path along with the point
+
+    visited = set()
+    visited.add((source.x, source.y))
+
+    while not frontier.isEmpty():
+        current, path = frontier.pop()
+        if current.x == dest.x and current.y == dest.y:
+            return path  # Return only the correct path
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            neighbor = Point(current.x + dx, current.y + dy)
+            if (neighbor.x, neighbor.y) not in visited and checkRange(neighbor) and not checkPointInPolygon(neighbor):
+                frontier.push((neighbor, path + [neighbor]))
+                visited.add((neighbor.x, neighbor.y))
+
+    return []  # Return an empty list if no path is found
 
 if __name__ == "__main__":
     epolygons = gen_polygons('TestingGrid/world1_enclosures.txt')
@@ -118,7 +190,7 @@ if __name__ == "__main__":
         for i in range(0, len(polygon)):
             draw_green_line(ax, [polygon[i].x, polygon[(i+1)%len(polygon)].x], [polygon[i].y, polygon[(i+1)%len(polygon)].y])
 
-    res_path = dfs(source, dest)
+    res_path = gbfs(source, dest)
     
     for i in range(len(res_path)-1, 0, -1):
         draw_result_line(ax, [res_path[i].x, res_path[i-1].x], [res_path[i].y, res_path[i-1].y])
